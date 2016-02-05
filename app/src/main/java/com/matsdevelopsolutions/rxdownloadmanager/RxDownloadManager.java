@@ -39,6 +39,7 @@ public class RxDownloadManager {
     private final BroadcastReceiver downloadClickReceiver;
     private final SharedPreferences preferences;
     private final BroadcastReceiver downloadCompleteReceiver;
+    private final BehaviorSubject<List<DownloadUpdate>> allDownloadsSubject = BehaviorSubject.create();
 
     /**
      * Map that stores active subjects of download that were "requested to track".
@@ -102,15 +103,26 @@ public class RxDownloadManager {
             }
         };
 
-        context.registerReceiver(downloadCompleteReceiver, new IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE));
-
         // refresh receiver
         startUpdate();
     }
 
+    public void onResume() {
+        context.registerReceiver(downloadCompleteReceiver, new IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE));
+        context.registerReceiver(downloadClickReceiver, new IntentFilter(DownloadManager.ACTION_NOTIFICATION_CLICKED));
+    }
+
+    public void onPause() {
+        try {
+            context.unregisterReceiver(downloadCompleteReceiver);
+            context.unregisterReceiver(downloadClickReceiver);
+        } catch (IllegalArgumentException iae) {
+
+        }
+    }
+
     public void stop() {
         stopUpdate();
-
     }
 
     Observable<Long> updateIntervalObservable;
@@ -124,24 +136,26 @@ public class RxDownloadManager {
     private void startUpdate() {
         if (updateIntervalObservable == null) {
             updateIntervalObservable = Observable.interval(60, TimeUnit.SECONDS);
+            updateSubscription = updateIntervalObservable.observeOn(AndroidSchedulers.mainThread())
+                    .subscribe(new Subscriber<Long>() {
+                        @Override
+                        public void onCompleted() {
+                            updateSubscription.unsubscribe();
+                        }
+
+                        @Override
+                        public void onError(Throwable e) {
+
+                        }
+
+                        @Override
+                        public void onNext(Long aLong) {
+                            updateQuery();
+                        }
+                    });
         }
-        updateSubscription = updateIntervalObservable.observeOn(AndroidSchedulers.mainThread())
-                .subscribe(new Subscriber<Long>() {
-                    @Override
-                    public void onCompleted() {
-                        updateSubscription.unsubscribe();
-                    }
-
-                    @Override
-                    public void onError(Throwable e) {
-
-                    }
-
-                    @Override
-                    public void onNext(Long aLong) {
-                        updateQuery();
-                    }
-                });
+        // first start
+        updateQuery();
     }
 
     private void updateDownloadDetails(DownloadUpdateContainer download) {
@@ -179,15 +193,17 @@ public class RxDownloadManager {
 
         Cursor cursor = downloadManager.query(query);
         if (cursor != null) {
-            updateDownloadDetails(cursor);
+            allDownloadsSubject.onNext(updateDownloadDetails(cursor));
         }
     }
 
-    private void updateDownloadDetails(Cursor cursor) {
+    private List<DownloadUpdate> updateDownloadDetails(Cursor cursor) {
+        List<DownloadUpdate> updatesList = new ArrayList<>();
         DownloadUpdate downloadUpdate;
         while (cursor.moveToNext()) {
             downloadUpdate = DownloadUpdate.fromCursor(cursor);
             if (downloadUpdate != null) {
+                updatesList.add(downloadUpdate);
                 // update
                 if (downloadSubjectsMap.get(downloadUpdate.id) != null) {
                     downloadSubjectsMap.get(downloadUpdate.id).subject.onNext(downloadUpdate);
@@ -196,6 +212,7 @@ public class RxDownloadManager {
                 }
             }
         }
+        return updatesList;
     }
 
     public Observable<DownloadUpdate> pauseDownload(long downloadId) {
@@ -242,13 +259,8 @@ public class RxDownloadManager {
         preferences.edit().putStringSet(DOWNLOAD_IDS_KEY, currentIds).apply();
     }
 
-    public Observable<List<DownloadUpdate>> listDownloads() {
-//        if (downloadSubjectsMap.size()>0) {
-//
-//            Observable<DownloadUpdate>.merge()
-//        }
-//        for(Observable<>)
-        return Observable.just(null);
+    public Observable<List<DownloadUpdate>> getAllDownloads() {
+        return allDownloadsSubject.asObservable();
     }
 
     public static class Builder {
@@ -271,18 +283,5 @@ public class RxDownloadManager {
         public RxDownloadManager build() {
             return new RxDownloadManager(context);
         }
-    }
-
-    /**
-     * Class that tracks and refreshes download item status.
-     */
-    private class DownloadItemTracker {
-        private BehaviorSubject<DownloadUpdate> itemDownloadSubject;
-
-        public DownloadItemTracker(Context context, BehaviorSubject<DownloadUpdate> itemDownloadSubject) {
-            this.itemDownloadSubject = itemDownloadSubject;
-
-        }
-
     }
 }

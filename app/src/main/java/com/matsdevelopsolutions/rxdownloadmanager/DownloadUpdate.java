@@ -10,10 +10,27 @@ public class DownloadUpdate {
     public String remoteUri;
     public String description;
     public int status = 0;
+    public int reason;
     public long size;
     public long downloadedSoFar;
     public int progressPercentage;
 
+    public String getStatus() {
+        switch (status) {
+            case DownloadManager.STATUS_FAILED:
+                return "FAILED";
+            case DownloadManager.STATUS_PAUSED:
+                return "PAUSED";
+            case DownloadManager.STATUS_PENDING:
+                return "PENDING";
+            case DownloadManager.STATUS_SUCCESSFUL:
+                return "SUCCESSFUL";
+            case DownloadManager.STATUS_RUNNING:
+                return "RUNNING";
+            default:
+                return "N/A";
+        }
+    }
 
     public DownloadUpdate(String title, long downloadId) {
         this.id = downloadId;
@@ -31,6 +48,7 @@ public class DownloadUpdate {
         long totalSize = cursor.getLong(cursor.getColumnIndex(DownloadManager.COLUMN_TOTAL_SIZE_BYTES));
         int status = cursor.getInt(cursor.getColumnIndex(DownloadManager.COLUMN_STATUS));
         long downloadedSoFar = cursor.getLong(cursor.getColumnIndex(DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR));
+        int reason = cursor.getInt(cursor.getColumnIndex(DownloadManager.COLUMN_REASON));
         String remoteUri = cursor.getString(cursor.getColumnIndex(DownloadManager.COLUMN_URI));
         DownloadUpdate downloadUpdate = new DownloadUpdate(title, downloadId);
         downloadUpdate.localUri = localUri;
@@ -39,6 +57,7 @@ public class DownloadUpdate {
         downloadUpdate.description = description;
         downloadUpdate.size = totalSize;
         downloadUpdate.downloadedSoFar = downloadedSoFar;
+        downloadUpdate.reason = reason;
         if (totalSize > 0) {
             downloadUpdate.progressPercentage = (int) (((float) downloadedSoFar) / ((float) totalSize));
         } else {
