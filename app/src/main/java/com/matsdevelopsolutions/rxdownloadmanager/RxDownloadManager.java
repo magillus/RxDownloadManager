@@ -47,6 +47,14 @@ public class RxDownloadManager {
     private Map<Long, DownloadUpdateContainer> downloadSubjectsMap = new HashMap<>();
     private Subscription updateSubscription;
 
+    public void cancelDownload(Long downloadId) {
+        downloadManager.remove(downloadId);
+    }
+
+    public void cancelAllDownloads() {
+        //downloadManager.remove((long[])downloadSubjectsMap.values().toArray());
+    }
+
     public class DownloadUpdateContainer {
         public DownloadUpdateContainer(Long id, BehaviorSubject<DownloadUpdate> subject) {
             this.subject = subject;
@@ -103,16 +111,18 @@ public class RxDownloadManager {
             }
         };
 
-        // refresh receiver
-        startUpdate();
     }
 
     public void onResume() {
         context.registerReceiver(downloadCompleteReceiver, new IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE));
         context.registerReceiver(downloadClickReceiver, new IntentFilter(DownloadManager.ACTION_NOTIFICATION_CLICKED));
+
+        // refresh receiver
+        startUpdate();
     }
 
     public void onPause() {
+        stopUpdate();
         try {
             context.unregisterReceiver(downloadCompleteReceiver);
             context.unregisterReceiver(downloadClickReceiver);
@@ -127,12 +137,18 @@ public class RxDownloadManager {
 
     Observable<Long> updateIntervalObservable;
 
+    /**
+     * Stops periodical updates for querying downloads.
+     */
     private void stopUpdate() {
         if (updateSubscription != null && !updateSubscription.isUnsubscribed()) {
             updateSubscription.unsubscribe();
         }
     }
 
+    /**
+     * Starts periodical updates for querying downloads.
+     */
     private void startUpdate() {
         if (updateIntervalObservable == null) {
             updateIntervalObservable = Observable.interval(60, TimeUnit.SECONDS);
@@ -159,7 +175,7 @@ public class RxDownloadManager {
     }
 
     private void updateDownloadDetails(DownloadUpdateContainer download) {
-        //todo update only one value
+        //todo perf - update only one value that changed
         List<Long> idList = new ArrayList<>();
         idList.add(download.id);
         updateObservablesByIdList(idList);
@@ -193,7 +209,9 @@ public class RxDownloadManager {
 
         Cursor cursor = downloadManager.query(query);
         if (cursor != null) {
-            allDownloadsSubject.onNext(updateDownloadDetails(cursor));
+            List<DownloadUpdate> confirmedDownloads = updateDownloadDetails(cursor);
+            // todo cross check confirmeddownloads with list of ids to remove ids from preferences
+            allDownloadsSubject.onNext(confirmedDownloads);
         }
     }
 
@@ -213,18 +231,6 @@ public class RxDownloadManager {
             }
         }
         return updatesList;
-    }
-
-    public Observable<DownloadUpdate> pauseDownload(long downloadId) {
-        return null;
-    }
-
-    public Observable<DownloadUpdate> resumeDownload(long downloadId) {
-        return null;
-    }
-
-    public Observable<DownloadUpdate> cancelDownload(long downloadId) {
-        return null;
     }
 
     public Observable<DownloadUpdate> fetchDownloadObservalbe(long downloadId) {

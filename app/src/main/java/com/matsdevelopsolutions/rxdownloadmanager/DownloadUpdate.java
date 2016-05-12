@@ -59,7 +59,7 @@ public class DownloadUpdate {
         downloadUpdate.downloadedSoFar = downloadedSoFar;
         downloadUpdate.reason = reason;
         if (totalSize > 0) {
-            downloadUpdate.progressPercentage = (int) (((float) downloadedSoFar) / ((float) totalSize));
+            downloadUpdate.progressPercentage = (int) (((float) downloadedSoFar * 100f) / ((float) totalSize));
         } else {
             downloadUpdate.progressPercentage = 0;
         }

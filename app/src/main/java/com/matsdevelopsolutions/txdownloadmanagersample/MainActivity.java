@@ -1,5 +1,7 @@
 package com.matsdevelopsolutions.txdownloadmanagersample;
 
+import android.app.DownloadManager;
+import android.content.Intent;
 import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
@@ -24,6 +26,7 @@ public class MainActivity extends AppCompatActivity {
 
     private DownloadAdapter downloadAdapter;
     private Subscription updateSubscription;
+    private RxDownloadManager downloadManager;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -62,18 +65,18 @@ public class MainActivity extends AppCompatActivity {
 
         RecyclerView downloadList = (RecyclerView) findViewById(R.id.download_list);
         downloadList.setLayoutManager(new LinearLayoutManager(this));
-        downloadAdapter = new DownloadAdapter();
+
+        downloadManager = new RxDownloadManager.Builder(this).build();
+        downloadAdapter = new DownloadAdapter(downloadManager);
         downloadList.setAdapter(downloadAdapter);
 
     }
 
-    private RxDownloadManager downloadManager;
 
     @Override
     protected void onResume() {
         super.onResume();
-        downloadManager = new RxDownloadManager.Builder(this).build();
-        downloadManager.onPause();
+        downloadManager.onResume();
         updateSubscription = downloadManager.getAllDownloads().subscribe(new Subscriber<List<DownloadUpdate>>() {
             @Override
             public void onCompleted() {
@@ -116,7 +119,9 @@ public class MainActivity extends AppCompatActivity {
         int id = item.getItemId();
 
         //noinspection SimplifiableIfStatement
-        if (id == R.id.action_settings) {
+        if (id == R.id.action_view_all) {
+            Intent intent = new Intent(DownloadManager.ACTION_VIEW_DOWNLOADS);
+            startActivity(intent);
             return true;
         }
 
