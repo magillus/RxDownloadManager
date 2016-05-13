@@ -66,7 +66,7 @@ public class MainActivity extends AppCompatActivity {
         RecyclerView downloadList = (RecyclerView) findViewById(R.id.download_list);
         downloadList.setLayoutManager(new LinearLayoutManager(this));
 
-        downloadManager = new RxDownloadManager.Builder(this).build();
+        downloadManager = new RxDownloadManager.Builder(this).setRefreshTimeout(10).build();
         downloadAdapter = new DownloadAdapter(downloadManager);
         downloadList.setAdapter(downloadAdapter);
 

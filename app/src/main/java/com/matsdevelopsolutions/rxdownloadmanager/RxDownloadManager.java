@@ -12,6 +12,7 @@ import android.net.Uri;
 import android.support.annotation.NonNull;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -34,9 +35,10 @@ public class RxDownloadManager {
 
     private PendingIntent downloadClickedIntent;
     private Context context;
+    private int refreshTimeout;
 
     private final DownloadManager downloadManager;
-    private final BroadcastReceiver downloadClickReceiver;
+    private BroadcastReceiver downloadClickReceiver;
     private final SharedPreferences preferences;
     private final BroadcastReceiver downloadCompleteReceiver;
     private final BehaviorSubject<List<DownloadUpdate>> allDownloadsSubject = BehaviorSubject.create();
@@ -47,12 +49,20 @@ public class RxDownloadManager {
     private Map<Long, DownloadUpdateContainer> downloadSubjectsMap = new HashMap<>();
     private Subscription updateSubscription;
 
+    /**
+     * Cancels a download by id
+     *
+     * @param downloadId
+     */
     public void cancelDownload(Long downloadId) {
         downloadManager.remove(downloadId);
     }
 
+    /**
+     * Cancels all tracked downloads
+     */
     public void cancelAllDownloads() {
-        //downloadManager.remove((long[])downloadSubjectsMap.values().toArray());
+        downloadManager.remove(getIdsArray(downloadSubjectsMap.keySet()));
     }
 
     public class DownloadUpdateContainer {
@@ -72,8 +82,10 @@ public class RxDownloadManager {
         return DownloadUpdate.fromCursor(cursor);
     }
 
-    private RxDownloadManager(@NonNull Context context) {
+    private RxDownloadManager(@NonNull Context context, int refreshTimeout, PendingIntent clickIntent) {
         this.context = context;
+        this.downloadClickedIntent = clickIntent;
+        this.refreshTimeout = refreshTimeout;
         preferences = context.getSharedPreferences(SHARED_PREFERENCES_KEY, Context.MODE_PRIVATE);
         downloadManager = (DownloadManager) context.getSystemService(Context.DOWNLOAD_SERVICE);
 
@@ -93,24 +105,27 @@ public class RxDownloadManager {
                 }
             }
         };
-        downloadClickReceiver = new BroadcastReceiver() {
-            @Override
-            public void onReceive(Context context, Intent intent) {
-                long downloadId = intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1);
-                try {
-                    downloadClickedIntent.send();
-                } catch (PendingIntent.CanceledException e) {
-                    e.printStackTrace();
+        if (downloadClickedIntent != null) {
+            downloadClickReceiver = new BroadcastReceiver() {
+                @Override
+                public void onReceive(Context context, Intent intent) {
+                    long downloadId = intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1);
+                    try {
+                        if (downloadClickedIntent != null) {
+                            downloadClickedIntent.send();
+                        }
+                    } catch (PendingIntent.CanceledException e) {
+                        e.printStackTrace();
+                    }
+                    // execute action
+
+                    // check if action is for download manager update
+                    // update map of downloadupate with values
+                    // call onError when error happens on download
+                    // call onComplete when download is completed
                 }
-                // execute action
-
-                // check if action is for download manager update
-                // update map of downloadupate with values
-                // call onError when error happens on download
-                // call onComplete when download is completed
-            }
-        };
-
+            };
+        }
     }
 
     public void onResume() {
@@ -129,10 +144,6 @@ public class RxDownloadManager {
         } catch (IllegalArgumentException iae) {
 
         }
-    }
-
-    public void stop() {
-        stopUpdate();
     }
 
     Observable<Long> updateIntervalObservable;
@@ -197,14 +208,19 @@ public class RxDownloadManager {
         }
     }
 
-    private void updateObservablesByIdList(final List<Long> currentDownloadIds) {
-        DownloadManager.Query query = new DownloadManager.Query();
-        Iterator<Long> downloadIdIterator = currentDownloadIds.iterator();
-        long[] idsArray = new long[currentDownloadIds.size()];
+    private long[] getIdsArray(Collection<Long> idsList) {
+        Iterator<Long> downloadIdIterator = idsList.iterator();
+        long[] idsArray = new long[idsList.size()];
         int i = 0;
         while (downloadIdIterator.hasNext()) {
             idsArray[i++] = downloadIdIterator.next();
         }
+        return idsArray;
+    }
+
+    private void updateObservablesByIdList(final List<Long> currentDownloadIds) {
+        DownloadManager.Query query = new DownloadManager.Query();
+        long[] idsArray = getIdsArray(currentDownloadIds);
         query.setFilterById(idsArray);
 
         Cursor cursor = downloadManager.query(query);
@@ -272,13 +288,10 @@ public class RxDownloadManager {
     public static class Builder {
         Context context;
         PendingIntent downloadClickedIntent;
+        int refreshTimeout = 60;//seconds
 
         public Builder(Context context) {
             this.context = context;
-        }
-
-        public static Builder withContext(Context context) {
-            return new Builder(context);
         }
 
         public Builder setOnDownloadClickIntent(PendingIntent onDownloadClickIntent) {
@@ -286,8 +299,14 @@ public class RxDownloadManager {
             return this;
         }
 
+        public Builder setRefreshTimeout(int refreshTimeout) {
+            this.refreshTimeout = refreshTimeout;
+            return this;
+        }
+
+
         public RxDownloadManager build() {
-            return new RxDownloadManager(context);
+            return new RxDownloadManager(context, refreshTimeout, downloadClickedIntent);
         }
     }
 }
