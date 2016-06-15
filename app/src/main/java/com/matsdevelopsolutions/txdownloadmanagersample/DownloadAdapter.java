@@ -1,8 +1,10 @@
 package com.matsdevelopsolutions.txdownloadmanagersample;
 
+import android.app.DownloadManager;
 import android.content.DialogInterface;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.widget.RecyclerView;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -11,6 +13,7 @@ import android.widget.TextView;
 import com.matsdevelopsolutions.rxdownloadmanager.DownloadUpdate;
 import com.matsdevelopsolutions.rxdownloadmanager.RxDownloadManager;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -19,6 +22,7 @@ import java.util.List;
  */
 public class DownloadAdapter extends RecyclerView.Adapter<DownloadAdapter.ViewHolder> {
 
+    private static final String TAG = "DownloadAdapter";
     private final List<DownloadUpdate> downloadsList = new ArrayList<>();
     private RxDownloadManager downloadManager;
 
@@ -61,24 +65,37 @@ public class DownloadAdapter extends RecyclerView.Adapter<DownloadAdapter.ViewHo
                     downloadUpdate.title,
                     downloadUpdate.progressPercentage,
                     downloadUpdate.getStatus()));
+
             itemView.setOnClickListener(new View.OnClickListener() {
                 @Override
-                public void onClick(View v) {
-                    new AlertDialog.Builder(v.getContext())
-                            .setPositiveButton("Cancel", new DialogInterface.OnClickListener() {
-                                @Override
-                                public void onClick(DialogInterface dialog, int which) {
-                                    downloadManager.cancelDownload(downloadUpdate.id);
-                                }
-                            })
-                            .setNegativeButton("Continue Download", new DialogInterface.OnClickListener() {
-                                @Override
-                                public void onClick(DialogInterface dialog, int which) {
-                                    //nothing
-                                }
-                            })
-                            .setTitle("Cancel Download?")
-                            .show();
+                public void onClick(final View v) {
+
+                    if (downloadUpdate.status == DownloadManager.STATUS_SUCCESSFUL) {
+                        // open file
+                        try {
+                            downloadManager.loadFile(downloadUpdate.id);
+                        } catch (IOException e) {
+                            Log.w(TAG, "Error opening downloaded file");
+                        }
+                    } else {
+
+                        new AlertDialog.Builder(v.getContext())
+                                .setPositiveButton("Cancel", new DialogInterface.OnClickListener() {
+                                    @Override
+                                    public void onClick(DialogInterface dialog, int which) {
+                                        downloadManager.cancelDownload(downloadUpdate.id);
+                                    }
+                                })
+                                .setNegativeButton("Continue Download", new DialogInterface.OnClickListener() {
+                                    @Override
+                                    public void onClick(DialogInterface dialog, int which) {
+                                        //nothing
+                                    }
+                                })
+                                .setTitle("Cancel Download?")
+                                .show();
+                    }
+
                 }
             });
         }

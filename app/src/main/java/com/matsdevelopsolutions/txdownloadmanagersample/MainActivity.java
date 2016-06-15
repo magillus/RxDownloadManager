@@ -48,9 +48,8 @@ public class MainActivity extends AppCompatActivity {
         download1.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                //http://releases.ubuntu.com/15.10/ubuntu-15.10-desktop-amd64.iso
                 if (downloadManager != null) {
-                    downloadManager.startDownload("http://releases.ubuntu.com/15.10/ubuntu-15.10-desktop-amd64.iso", "Ubuntu-15.10");
+                    downloadManager.startDownload("http://perlak.com/projects/MeshNavigator.code", "Smaller file");
                 }
             }
         });
@@ -66,8 +65,10 @@ public class MainActivity extends AppCompatActivity {
         RecyclerView downloadList = (RecyclerView) findViewById(R.id.download_list);
         downloadList.setLayoutManager(new LinearLayoutManager(this));
 
+
         downloadManager = new RxDownloadManager.Builder(this).setRefreshTimeout(10).build();
         downloadAdapter = new DownloadAdapter(downloadManager);
+
         downloadList.setAdapter(downloadAdapter);
 
     }
@@ -121,6 +122,10 @@ public class MainActivity extends AppCompatActivity {
         //noinspection SimplifiableIfStatement
         if (id == R.id.action_view_all) {
             Intent intent = new Intent(DownloadManager.ACTION_VIEW_DOWNLOADS);
+            startActivity(intent);
+            return true;
+        } else if (id == R.id.download_activity) {
+            Intent intent = new Intent(this, DownloadActivity.class);
             startActivity(intent);
             return true;
         }

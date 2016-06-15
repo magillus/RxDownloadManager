@@ -10,7 +10,12 @@ import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.net.Uri;
 import android.support.annotation.NonNull;
+import android.util.Log;
 
+import java.io.BufferedInputStream;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -29,6 +34,8 @@ import rx.android.schedulers.AndroidSchedulers;
 import rx.subjects.BehaviorSubject;
 
 public class RxDownloadManager {
+
+    private static final String TAG = RxDownloadManager.class.getSimpleName();
 
     private static final String SHARED_PREFERENCES_KEY = "DOWNLOAD_MANAGER_SHARED_PREF";
     private static final String DOWNLOAD_IDS_KEY = "DOWNLOAD_IDS_KEY";
@@ -63,6 +70,22 @@ public class RxDownloadManager {
      */
     public void cancelAllDownloads() {
         downloadManager.remove(getIdsArray(downloadSubjectsMap.keySet()));
+    }
+
+    public void loadFile(long id) throws IOException {
+        BufferedInputStream bis = null;
+        try {
+            bis = new BufferedInputStream(
+                    new FileInputStream(downloadManager.openDownloadedFile(id).getFileDescriptor()));
+            Log.i(TAG, "File size: " + bis.available());
+            // READ THE FILE BYTES
+        } catch (FileNotFoundException e) {
+            Log.w(TAG, "Error opening downloaded file");
+        } finally {
+            if (bis != null)
+                bis.close();
+        }
+
     }
 
     public class DownloadUpdateContainer {
