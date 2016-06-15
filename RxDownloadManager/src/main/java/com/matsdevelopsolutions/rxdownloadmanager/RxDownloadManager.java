@@ -112,6 +112,7 @@ public class RxDownloadManager {
                     long downloadId = intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1);
                     try {
                         if (downloadClickedIntent != null) {
+                            // todo find way to pass details
                             downloadClickedIntent.send();
                         }
                     } catch (PendingIntent.CanceledException e) {
@@ -249,7 +250,7 @@ public class RxDownloadManager {
         return updatesList;
     }
 
-    public Observable<DownloadUpdate> fetchDownloadObservalbe(long downloadId) {
+    public Observable<DownloadUpdate> getDownloadUpdateObservalbe(long downloadId) {
         return downloadSubjectsMap.get(downloadId).subject.asObservable();
     }
 
@@ -285,6 +286,9 @@ public class RxDownloadManager {
         return allDownloadsSubject.asObservable();
     }
 
+    /**
+     * RxDownloadManager builder class for custom configuration.
+     */
     public static class Builder {
         Context context;
         PendingIntent downloadClickedIntent;
@@ -303,7 +307,6 @@ public class RxDownloadManager {
             this.refreshTimeout = refreshTimeout;
             return this;
         }
-
 
         public RxDownloadManager build() {
             return new RxDownloadManager(context, refreshTimeout, downloadClickedIntent);
