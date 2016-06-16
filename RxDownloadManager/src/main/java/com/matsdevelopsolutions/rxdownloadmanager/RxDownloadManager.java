@@ -13,6 +13,7 @@ import android.support.annotation.NonNull;
 import android.util.Log;
 
 import java.io.BufferedInputStream;
+import java.io.FileDescriptor;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -31,6 +32,7 @@ import rx.Observable;
 import rx.Subscriber;
 import rx.Subscription;
 import rx.android.schedulers.AndroidSchedulers;
+import rx.functions.Action1;
 import rx.subjects.BehaviorSubject;
 
 public class RxDownloadManager {
@@ -77,10 +79,10 @@ public class RxDownloadManager {
         try {
             bis = new BufferedInputStream(
                     new FileInputStream(downloadManager.openDownloadedFile(id).getFileDescriptor()));
-            Log.i(TAG, "File size: " + bis.available());
+            Log.v(TAG, "File size: " + bis.available());
             // READ THE FILE BYTES
         } catch (FileNotFoundException e) {
-            Log.w(TAG, "Error opening downloaded file");
+            Log.w(TAG, "Error opening downloaded file, id : " + id);
         } finally {
             if (bis != null)
                 bis.close();
